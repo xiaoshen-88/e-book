@@ -3,147 +3,246 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>产品画册</title>
+    <title>鑫质信产品画册</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { 
-            background: #f1f1f1; 
+            background: #f0f0f0; 
             min-height: 100vh;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             padding: 10px;
+            padding-bottom: 80px; /* 给导航栏预留安全空间 */
         }
 
-        /* 核心：图片容器严格自适应 */
-        .page-container {
+        /* 书本容器：电脑双页，手机单页 */
+        .book {
             width: 95vw;
-            max-width: 900px;
-            height: calc(95vw * 1.414); /* A4标准比例，手机/电脑自动适配 */
+            max-width: 1000px;
+            height: calc(95vw * 0.707); /* 双页总比例：A4单页(1:1.414)×2 → 1:0.707 */
             max-height: 90vh;
             position: relative;
             background: #fff;
-            box-shadow: 0 0 20px rgba(0,0,0,0.2);
+            box-shadow: 0 0 30px rgba(0,0,0,0.3);
             overflow: hidden;
-        }
-
-        .page {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            display: none;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .page.active {
             display: flex;
         }
 
-        /* 核心：图片完美自适应，不裁切、不变形 */
-        .page img {
+        /* 左右页容器 */
+        .page-left, .page-right {
+            width: 50%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            background: #fff;
+            padding: 10px;
+        }
+
+        /* 图片自适应：完整显示，不变形、不裁切、高清 */
+        .page-left img, .page-right img {
             max-width: 100%;
             max-height: 100%;
             width: auto;
             height: auto;
             object-fit: contain;
             display: block;
-            /* 高清渲染 */
             image-rendering: auto;
             image-rendering: crisp-edges;
             image-rendering: -webkit-optimize-contrast;
         }
 
-        /* 导航栏固定底部，不遮挡内容 */
+        /* 手机端：单页全屏 */
+        @media (max-width: 768px) {
+            .book {
+                height: calc(95vw * 1.414); /* 单页A4比例 */
+                max-height: 75vh; /* 给导航栏留足空间 */
+            }
+            .page-left { display: none; }
+            .page-right { 
+                width: 100%; 
+                padding: 5px;
+            }
+        }
+
+        /* 导航栏：双端统一一行显示，大小适中 */
         .nav {
             position: fixed;
-            bottom: 10px;
+            bottom: 15px;
             left: 50%;
             transform: translateX(-50%);
-            background: rgba(0,0,0,0.8);
-            padding: 10px 20px;
+            background: rgba(0,0,0,0.85);
+            padding: 8px 18px;
             border-radius: 8px;
             z-index: 999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            width: auto;
+            min-width: 280px;
         }
 
         button {
-            padding: 10px 20px;
-            margin: 0 10px;
+            padding: 8px 16px;
             background: #333;
             color: white;
             border: none;
             border-radius: 6px;
-            font-size: 16px;
+            font-size: 14px;
             cursor: pointer;
+            transition: background 0.2s;
+            white-space: nowrap;
         }
+        button:hover { background: #555; }
 
         #pageInfo {
             color: white;
-            font-size: 16px;
-            margin: 0 15px;
+            font-size: 14px;
+            min-width: 60px;
+            text-align: center;
+            white-space: nowrap;
+        }
+
+        /* 手机端导航栏极致优化 */
+        @media (max-width: 768px) {
+            .nav {
+                padding: 6px 15px;
+                gap: 12px;
+                min-width: 260px;
+                bottom: 10px;
+            }
+            button {
+                padding: 6px 12px;
+                font-size: 13px;
+            }
+            #pageInfo {
+                font-size: 13px;
+                min-width: 50px;
+            }
         }
     </style>
 </head>
 <body>
 
-<div class="page-container">
-    <!-- 页面自动生成 -->
+<div class="book">
+    <div class="page-left"><img id="img-left" src="" alt="左页"></div>
+    <div class="page-right"><img id="img-right" src="" alt="右页"></div>
 </div>
 
 <div class="nav">
-    <button onclick="prev()">← 上一页</button>
+    <button onclick="prevPage()">← 上一页</button>
     <span id="pageInfo">1 / 60</span>
-    <button onclick="next()">下一页 →</button>
+    <button onclick="nextPage()">下一页 →</button>
 </div>
 
 <script>
-    const total = 60;
-    let current = 1;
-    const container = document.querySelector('.page-container');
+    const totalPages = 60;
+    let currentPage = 1;
+    const imgLeft = document.getElementById('img-left');
+    const imgRight = document.getElementById('img-right');
+    const pageInfo = document.getElementById('pageInfo');
+    const isMobile = window.innerWidth < 768;
 
-    // 生成1-60页
-    for (let i = 1; i <= total; i++) {
-        let div = document.createElement('div');
-        div.className = 'page' + (i === 1 ? ' active' : '');
-        div.innerHTML = `<img src="./images/${i}.jpg" alt="page${i}">`;
-        container.appendChild(div);
+    // 初始化显示第一页
+    updatePages();
+
+    // 更新左右页图片（核心逻辑：封面/封底/内页完美匹配实体书）
+    function updatePages() {
+        if (!isMobile) {
+            // 电脑端双页逻辑
+            if (currentPage === 1) {
+                // 封面：左页空白，右页显示1.jpg
+                imgLeft.src = "";
+                imgLeft.style.display = "none";
+                imgRight.src = `./images/${currentPage}.jpg`;
+                imgRight.style.display = "block";
+                pageInfo.textContent = `${currentPage} / ${totalPages}`;
+            } else if (currentPage === totalPages) {
+                // 封底：左页59.jpg，右页60.jpg
+                imgLeft.src = `./images/${currentPage - 1}.jpg`;
+                imgLeft.style.display = "block";
+                imgRight.src = `./images/${currentPage}.jpg`;
+                imgRight.style.display = "block";
+                pageInfo.textContent = `${currentPage - 1}-${currentPage} / ${totalPages}`;
+            } else {
+                // 正常内页：左奇右偶
+                imgLeft.src = `./images/${currentPage}.jpg`;
+                imgLeft.style.display = "block";
+                imgRight.src = `./images/${currentPage + 1}.jpg`;
+                imgRight.style.display = "block";
+                pageInfo.textContent = `${currentPage}-${currentPage + 1} / ${totalPages}`;
+            }
+        } else {
+            // 手机端单页逻辑
+            imgLeft.style.display = "none";
+            imgRight.src = `./images/${currentPage}.jpg`;
+            imgRight.style.display = "block";
+            pageInfo.textContent = `${currentPage} / ${totalPages}`;
+        }
     }
 
-    const pages = document.querySelectorAll('.page');
-
-    function showPage(n) {
-        pages.forEach(p => p.classList.remove('active'));
-        pages[n - 1].classList.add('active');
-        current = n;
-        updateInfo();
+    // 下一页
+    function nextPage() {
+        if (isMobile) {
+            if (currentPage < totalPages) {
+                currentPage++;
+                updatePages();
+            }
+        } else {
+            if (currentPage === 1) {
+                currentPage = 2;
+            } else if (currentPage < totalPages - 1) {
+                currentPage += 2;
+            } else if (currentPage === totalPages - 1) {
+                currentPage = totalPages;
+            }
+            updatePages();
+        }
     }
 
-    function prev() {
-        if (current > 1) showPage(current - 1);
+    // 上一页
+    function prevPage() {
+        if (isMobile) {
+            if (currentPage > 1) {
+                currentPage--;
+                updatePages();
+            }
+        } else {
+            if (currentPage === 2) {
+                currentPage = 1;
+            } else if (currentPage === totalPages) {
+                currentPage = totalPages - 1;
+            } else if (currentPage > 1) {
+                currentPage -= 2;
+            }
+            updatePages();
+        }
     }
 
-    function next() {
-        if (current < total) showPage(current + 1);
-    }
-
-    function updateInfo() {
-        document.getElementById('pageInfo').innerText = `${current} / ${total}`;
-    }
-
-    // 键盘/左右键翻页
-    document.addEventListener('keydown', e => {
-        if (e.key === 'ArrowLeft') prev();
-        if (e.key === 'ArrowRight') next();
+    // 点击翻页：左区上一页，右区下一页
+    document.querySelector('.book').addEventListener('click', (e) => {
+        const book = e.currentTarget;
+        const x = e.clientX - book.getBoundingClientRect().left;
+        const center = book.offsetWidth / 2;
+        x > center ? nextPage() : prevPage();
     });
 
-    // 点击图片左右区域翻页
-    container.addEventListener('click', e => {
-        const x = e.clientX - container.getBoundingClientRect().left;
-        const center = container.offsetWidth / 2;
-        x > center ? next() : prev();
+    // 键盘翻页
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowLeft') prevPage();
+        if (e.key === 'ArrowRight') nextPage();
+    });
+
+    // 窗口大小变化自动适配
+    window.addEventListener('resize', () => {
+        const newIsMobile = window.innerWidth < 768;
+        if (newIsMobile !== isMobile) {
+            location.reload();
+        }
     });
 </script>
 
