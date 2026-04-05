@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>翻页电子书</title>
+    <style>
+        * {margin:0;padding:0;border:0;box-sizing:border-box;}
+        html,body {height:100%;background:#f1f1f1;}
+        body {display:flex;align-items:center;justify-content:center;padding:10px;}
+        #book {background:#fff;box-shadow:0 0 30px rgba(0,0,0,0.2);}
+        .page {width:100%;height:100%;overflow:hidden;}
+        .page img {width:100%;height:100%;object-fit:cover;}
+    </style>
+</head>
+
+<body>
+    <div id="book"></div>
+
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.bootcdn.net/ajax/libs/turn.js/4.1.0/turn.min.js"></script>
+
+    <script>
+        $(function(){
+            function resize(){
+                let w = $(window).width();
+                let sizeW, sizeH;
+
+                if(w<768){
+                    sizeW = w*0.95;
+                    sizeH = sizeW*1.4;
+                }else{
+                    sizeW = 800;
+                    sizeH = 600;
+                }
+
+                $('#book').css({width:sizeW, height:sizeH});
+            }
+
+            resize();
+            $(window).resize(resize);
+
+            $('#book').turn({
+                width: $('#book').width(),
+                height: $('#book').height(),
+                autoCenter: true,
+                display: 'double',
+                acceleration: true,
+                duration: 500
+            });
+
+            // 1～60页图片
+            for(let i=1; i<=60; i++){
+                $('#book').turn('addPage', `
+                <div class="page"><img src="images/${i}.jpg" alt=""></div>
+                `, i);
+            }
+        });
+    </script>
+</body>
+</html>
