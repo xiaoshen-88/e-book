@@ -2,96 +2,149 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>我的电子书</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>产品画册</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { background: #f1f1f1; padding: 10px; }
-        .book {
-            max-width: 900px;
-            margin: 0 auto;
-            background: white;
-            box-shadow: 0 0 20px rgba(0,0,0,0.2);
-        }
-        .page {
-            width: 100%;
-            display: none;
-        }
-        .page.active {
-            display: block;
-        }
-        .page img {
-            width: 100%;
-            display: block;
-        }
-        .nav {
+        body { 
+            background: #f1f1f1; 
+            min-height: 100vh;
             display: flex;
+            flex-direction: column;
+            align-items: center;
             justify-content: center;
-            gap: 20px;
-            padding: 15px;
-            background: white;
-            margin-top: 10px;
+            padding: 10px;
         }
+
+        /* 核心：图片容器严格自适应 */
+        .page-container {
+            width: 95vw;
+            max-width: 900px;
+            height: calc(95vw * 1.414); /* A4标准比例，手机/电脑自动适配 */
+            max-height: 90vh;
+            position: relative;
+            background: #fff;
+            box-shadow: 0 0 20px rgba(0,0,0,0.2);
+            overflow: hidden;
+        }
+
+        .page {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .page.active {
+            display: flex;
+        }
+
+        /* 核心：图片完美自适应，不裁切、不变形 */
+        .page img {
+            max-width: 100%;
+            max-height: 100%;
+            width: auto;
+            height: auto;
+            object-fit: contain;
+            display: block;
+            /* 高清渲染 */
+            image-rendering: auto;
+            image-rendering: crisp-edges;
+            image-rendering: -webkit-optimize-contrast;
+        }
+
+        /* 导航栏固定底部，不遮挡内容 */
+        .nav {
+            position: fixed;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.8);
+            padding: 10px 20px;
+            border-radius: 8px;
+            z-index: 999;
+        }
+
         button {
             padding: 10px 20px;
-            font-size: 16px;
-            cursor: pointer;
+            margin: 0 10px;
             background: #333;
             color: white;
             border: none;
-            border-radius: 5px;
+            border-radius: 6px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        #pageInfo {
+            color: white;
+            font-size: 16px;
+            margin: 0 15px;
         }
     </style>
 </head>
 <body>
 
-<div class="book">
-    <!-- 自动生成 1-60 页图片 -->
+<div class="page-container">
+    <!-- 页面自动生成 -->
 </div>
 
 <div class="nav">
-    <button onclick="prev()">上一页</button>
-    <span id="pageNum">第 1 页 / 共 60 页</span>
-    <button onclick="next()">下一页</button>
+    <button onclick="prev()">← 上一页</button>
+    <span id="pageInfo">1 / 60</span>
+    <button onclick="next()">下一页 →</button>
 </div>
 
 <script>
-    let currentPage = 1;
-    const totalPages = 60;
-    const book = document.querySelector('.book');
+    const total = 60;
+    let current = 1;
+    const container = document.querySelector('.page-container');
 
-    // 生成 1-60 页
-    for (let i = 1; i <= totalPages; i++) {
+    // 生成1-60页
+    for (let i = 1; i <= total; i++) {
         let div = document.createElement('div');
         div.className = 'page' + (i === 1 ? ' active' : '');
-        div.innerHTML = `<img src="images/${i}.jpg" alt="第${i}页">`;
-        book.appendChild(div);
+        div.innerHTML = `<img src="./images/${i}.jpg" alt="page${i}">`;
+        container.appendChild(div);
     }
 
-    // 上一页
+    const pages = document.querySelectorAll('.page');
+
+    function showPage(n) {
+        pages.forEach(p => p.classList.remove('active'));
+        pages[n - 1].classList.add('active');
+        current = n;
+        updateInfo();
+    }
+
     function prev() {
-        if (currentPage > 1) {
-            document.querySelectorAll('.page')[currentPage - 1].classList.remove('active');
-            currentPage--;
-            document.querySelectorAll('.page')[currentPage - 1].classList.add('active');
-            updatePageNum();
-        }
+        if (current > 1) showPage(current - 1);
     }
 
-    // 下一页
     function next() {
-        if (currentPage < totalPages) {
-            document.querySelectorAll('.page')[currentPage - 1].classList.remove('active');
-            currentPage++;
-            document.querySelectorAll('.page')[currentPage - 1].classList.add('active');
-            updatePageNum();
-        }
+        if (current < total) showPage(current + 1);
     }
 
-    // 更新页码
-    function updatePageNum() {
-        document.getElementById('pageNum').innerText = `第 ${currentPage} 页 / 共 ${totalPages} 页`;
+    function updateInfo() {
+        document.getElementById('pageInfo').innerText = `${current} / ${total}`;
     }
+
+    // 键盘/左右键翻页
+    document.addEventListener('keydown', e => {
+        if (e.key === 'ArrowLeft') prev();
+        if (e.key === 'ArrowRight') next();
+    });
+
+    // 点击图片左右区域翻页
+    container.addEventListener('click', e => {
+        const x = e.clientX - container.getBoundingClientRect().left;
+        const center = container.offsetWidth / 2;
+        x > center ? next() : prev();
+    });
 </script>
 
 </body>
