@@ -22,76 +22,84 @@
             background: #fff;
             box-shadow: 0 0 20px rgba(0,0,0,0.2);
         }
-        .page {
-            width: 100%;
-            height: 100%;
-            overflow: hidden;
+        .turn-page {
+            background: #fff;
             display: flex;
             align-items: center;
             justify-content: center;
+            overflow: hidden;
         }
-        .page img {
-            width: 100%;
-            height: 100%;
+        .turn-page img {
+            max-width: 100%;
+            max-height: 100%;
             object-fit: contain;
-            background: #fff;
+            display: block;
         }
     </style>
 </head>
 <body>
     <div id="book"></div>
 
-    <!-- 用本地文件，彻底解决CDN加载失败问题 -->
+    <!-- 本地文件加载，确保稳定 -->
     <script src="js/jquery.min.js"></script>
     <script src="js/turn.min.js"></script>
 
     <script>
-        // 等所有资源加载完再初始化，彻底解决白屏
-        window.onload = function() {
-            // 自适应尺寸
-            function resizeBook() {
-                let winW = $(window).width();
-                let bookW, bookH;
+        $(document).ready(function() {
+            // 1. 先创建所有页面，再初始化翻页（核心修复）
+            const pagesHtml = [];
+            for (let i = 1; i <= 60; i++) {
+                pagesHtml.push(`
+                    <div class="turn-page">
+                        <img src="images/${i}.jpg" alt="第${i}页">
+                    </div>
+                `);
+            }
 
-                if (winW < 768) { // 手机端
+            // 2. 自适应尺寸，手机/电脑自动适配
+            function resizeBook() {
+                const winW = $(window).width();
+                let bookW, bookH, displayMode;
+
+                if (winW < 768) {
+                    // 手机端：单页显示，避免白屏
                     bookW = winW * 0.95;
                     bookH = bookW * 1.4;
-                } else { // 电脑端
+                    displayMode = "single";
+                } else {
+                    // 电脑端：双页显示
                     bookW = 800;
                     bookH = 600;
+                    displayMode = "double";
                 }
 
                 $("#book").css({
                     width: bookW,
                     height: bookH
                 });
+
+                // 动态更新翻页显示模式
+                if ($("#book").turn("is")) {
+                    $("#book").turn("display", displayMode);
+                    $("#book").turn("size", bookW, bookH);
+                }
             }
 
-            // 初始化尺寸
-            resizeBook();
-            $(window).resize(resizeBook);
-
-            // 初始化翻页插件（核心修复：先创建容器再加载页面）
-            const book = $("#book");
-            book.turn({
-                width: book.width(),
-                height: book.height(),
+            // 3. 初始化翻页（先加载页面，再初始化）
+            $("#book").html(pagesHtml.join("")).turn({
                 autoCenter: true,
-                display: "double",
+                display: $(window).width() < 768 ? "single" : "double",
                 acceleration: true,
                 duration: 600,
-                pages: 60 // 明确总页数
+                elevation: 50,
+                gradients: true,
+                pages: 60
             });
 
-            // 循环添加1-60页图片
-            for (let i = 1; i <= 60; i++) {
-                book.turn("addPage", `
-                    <div class="page">
-                        <img src="images/${i}.jpg" alt="第${i}页">
-                    </div>
-                `, i);
-            }
-        };
+            // 4. 窗口大小变化时自动适配
+            resizeBook();
+            $(window).resize(resizeBook);
+        });
     </script>
 </body>
 </html>
